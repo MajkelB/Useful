@@ -1,0 +1,106 @@
+Setting hotdeploymnet with netbeans 8.2 and jrebel 2020.1.1 to weblogic server 12.2.1.4
+
+1. Install java, netbeans, maven
+2. Build project maven (clean package)
+3. If project builds without errors its ready to add hot deployment
+4. Download jrebel plugin for netbeans and standalone jrebel for weblogic
+
+Setting Jrebel in WLS
+
+5. Install standalone jrebel plugin
+6. Create additional WLS starting script with content:
+
+@echo off
+set REBEL_HOME=C:\Programy\jrebel
+set JAVA_OPTIONS=-agentpath:%REBEL_HOME%\lib\jrebel64.dll -Drebel.remoting_plugin=true %JAVA_OPTIONS%
+call "%~dp0\startWebLogic.cmd" %*
+
+7. Start WLS - it should have additional sections in the logs file similiar to:
+
+2020-03-23 14:36:38 JRebel:  Starting logging to file: C:\Users\******\.jrebel\jrebel.log
+2020-03-23 14:36:38 JRebel:
+2020-03-23 14:36:38 JRebel:  #############################################################
+2020-03-23 14:36:38 JRebel:
+2020-03-23 14:36:38 JRebel:  JRebel Agent 2020.1.1 (202002121226)
+2020-03-23 14:36:38 JRebel:  (c) Copyright 2007-2020 Perforce Software, Inc.
+2020-03-23 14:36:38 JRebel:
+2020-03-23 14:36:38 JRebel:  Over the last 1 days JRebel prevented
+2020-03-23 14:36:38 JRebel:  at least 0 redeploys/restarts saving you about 0 hours.
+2020-03-23 14:36:38 JRebel:
+2020-03-23 14:36:38 JRebel:  JRebel started in remote server mode.
+2020-03-23 14:36:38 JRebel:
+2020-03-23 14:36:38 JRebel:
+2020-03-23 14:36:38 JRebel:  #############################################################
+2020-03-23 14:36:38 JRebel:
+
+8. WLS is ready for hotdeploymnet
+
+9. Install plugin in Netbeans IDE (online or manually)
+10. There should be additional JRebel card in the Options Window
+11. Enter license (JRebel->General tab)
+12. Run on a remote server VM (JRebel->Startup tab)
+13. Add remote server - url:port (JRebel->Remote servers tab)
+14. In the pom.xml of the ear project add:
+
+	<build>
+		<plugins>
+			<plugin>
+				<groupId>com.oracle.weblogic</groupId>
+				<artifactId>weblogic-maven-plugin</artifactId>
+				<version>12.2.1-4-0</version>
+				<configuration>
+					<adminurl>t3://127.0.0.1:8333</adminurl>
+					<user>weblogic</user>
+					<password>weblogic1</password>
+					<source>${project.build.directory}/${finalName}.${project.packaging}</source>
+					<targets>AdminServer</targets>
+					<verbose>true</verbose>
+					<name>${finalName}</name>
+					<upload>true</upload>
+				</configuration>
+				<executions>
+					<execution>
+						<phase>install</phase>
+						<goals>
+							<goal>deploy</goal>
+							</goals>
+					</execution>
+				</executions>
+			</plugin>                        
+		</plugins>
+	</build>
+
+Warning - to use weblogic-maven-plugin use this oracle-maven-sync tool:
+
+$ cd $ORACLE_HOME/oracle_common/plugins/maven/com/oracle/maven/oracle-maven-sync/12.2.1/
+$ ls
+oracle-maven-sync-12.2.1.jar	oracle-maven-sync-12.2.1.pom
+$ mvn install:install-file -DpomFile=oracle-maven-sync.12.2.1.pom -Dfile=oracle-maven-sync.12.2.1.jar
+
+and finally
+
+mvn com.oracle.maven:oracle-maven-sync:push -DoracleHome=$ORACLE_HOME
+
+this will install some necessary jars to maven repo
+	
+15. mvn install
+16. Check WLS logs. There should be "list of watched files"
+17. Go to Netbeans IDE.
+18. Make any change and save - check logs. There should be something like this:
+
+[INFO] 2020-03-26 17:04:32 : [Project JPA, server SES] Connecting to server to sync project
+[INFO] 2020-03-26 17:04:32 : [Project JPA, server SES] Uploading resource 'C:\Da***********\N****N.class' as '*****til.class'
+[INFO] 2020-03-26 17:04:32 : [Project JPA, server SES] Upload succeeded in 142 ms. Transaction took 201 ms.
+[INFO] 2020-03-26 17:04:32 : Synchronization took 204 ms in total.
+
+
+
+Useful links:
+
+https://blog.mshimul.com/deploy-applications-to-oracle-weblogic-server-using-weblogic-maven-plugin/
+http://middlewaremagic.com/weblogic/?tag=maven&paged=2
+
+
+	
+	
+	
